@@ -45,15 +45,20 @@ if [ ! -d "$dev_tools_config_dir" ]; then
   echo "kill nw"
 
   kill -9 $nw_pid
+
+  if [ ! -d "$dev_tools_config_dir" ]; then
+    fail "开发者工具未生成文件夹 $dev_tools_config_dir, 可能是权限问题, 请参考项目issue"
+    exit 1
+  fi
 fi
 
-if [ -d "$dev_tools_config_dir" ]; then
-  echo "cp -rf $root_dir/bin/WeappVendor/* $dev_tools_config_dir/WeappVendor/"
-  cp -rf $root_dir/bin/WeappVendor/* "$dev_tools_config_dir/WeappVendor/"
-  mkdir -p "$dev_tools_config_dir/WeappVendor/s"
-  echo cp -rf $vendor_dir/wcc.exe $vendor_dir/wcsc.exe "$dev_tools_config_dir/WeappVendor/s/"
-  cp -rf $vendor_dir/wcc.exe $vendor_dir/wcsc.exe "$dev_tools_config_dir/WeappVendor/s/"
-  success "Success"
-else
-  success "开发者工具未生成文件夹 $dev_tools_config_dir, 可能是权限问题, 请参考项目issue"
-fi
+
+
+echo "cp -rf $root_dir/bin/WeappVendor/* $dev_tools_config_dir/WeappVendor/"
+mkdir -p "$dev_tools_config_dir/WeappVendor/s"
+cp -rf $root_dir/bin/WeappVendor/* "$dev_tools_config_dir/WeappVendor/"
+
+echo "cp -rf $vendor_dir/wcc.exe $vendor_dir/wcsc.exe $dev_tools_config_dir/WeappVendor/s/"
+cp -rf $vendor_dir/wcc.exe $vendor_dir/wcsc.exe "$dev_tools_config_dir/WeappVendor/s/"
+
+success

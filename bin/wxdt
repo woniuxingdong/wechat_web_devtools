@@ -1,36 +1,83 @@
-#! /bin/bash
+#!/bin/bash
 
-root_dir=$(cd `dirname $0`/.. && pwd -P)
 
-nwjs_v=`cat $root_dir/nwjs_v`
+# Constant for directories
+ROOT_DIR=$(cd `dirname $0`/.. && pwd -P)
+BIN_DIR=${ROOT_DIR}/bin
+DIST_DIR=${ROOT_DIR}/dist
 
-cur_nwjs_v=""
 
-if [ -f "$root_dir/dist/nwjs_version" ]; then
-  cur_nwjs_v=`cat "$root_dir/dist/nwjs_version"`
+# Check if a shell or command had failed. 
+# If failed, this shell would exited with error and error message.
+failedandStop () {
+  stat=$1
+  msg=$2
+
+  if [ ${stat} -ne 0 ]; then
+    echo "Failed => ${stat}, ${msg}"
+    exit ${stat}
+  fi
+}
+
+
+updateNwjsIfNessary() {
+  target_nwjs_v=`cat $ROOT_DIR/nwjs_v`
+  cur_nwjs_v=""
+                                                                          
+  if [ -f "${DIST_DIR}/nwjs_version" ]; then                                
+    cur_nwjs_v=`cat "${DIST_DIR}/nwjs_version"`                             
+  fi
+                                                                            
+  if [ "x${target_cur_nwjs_v}" != "x${nwjs_v}" ]; then                                   
+    echo "安装微信开发者工具对应nwjs版本：${target_nwjs_v}"                          
+    bash "${BIN_DIR}/update_nwjs.sh"                                        
+    failedandStop $? "Failed to update nwjs"                                
+  fi
+}
+
+
+
+action=${1:-"start"}
+if [ ${action} = "start" ]; then
+  echo "Starting ..."
+  exec ${DIST_DIR}/nw -load-extension=${DIST_DIR}/package.nw/js/ideplugin $@ &
 fi
 
-if [ "$cur_nwjs_v" != "$nwjs_v" ]; then
-  echo "安装微信开发者工具对应nwjs版本：$nwjs_v"
-  bash "$root_dir/bin/update_nwjs.sh"
-fi
 
-# fix
+if [ ${action} = "install" ]; then
+  echo "Installing ..."
+  echo 
 
-cd "$root_dir/dist"
+  echo "Update nw.js if not match the target version"
+  updateNwjsIfNessary
 
-want=${1:-"start"}
-if [ $want = "install" ]; then
-  exec "$root_dir/bin/replace_weapp_vendor.sh"
-  exec "$root_dir/bin/install_desktop.sh"
+  echo "Replacing wx binary"
+  bash "${BIN_DIR}/replace_weapp_vendor.sh" 
+  failedandStop $? "Failed to replace wx binary"
+  
+  echo "Install desktop file ..."
+  bash "${BIN_DIR}/install_desktop.sh"
+  failedandStop $?
+
   echo "安装完成"
-elif [ $want = "debug" ]; then
+  exit 0
+fi
+
+
+if [ ${action} = "debug" ]; then
+  echo "Debugging ... "
+
+  #FIXME: this port could be configured by user I am afraid
   port=9222
   echo "remote-debugging-port:$port"
-  exec ./nw --remote-debugging-port=$port
-elif [ $want = "uninstall" ]; then
-  exec "$root_dir/bin/uninstall.sh"
+  exec ${DIST_DIR}/nw --remote-debugging-port=$port
+fi
+
+# It seems that we could lauch the wx develop tool even after this command.
+# But it could have some errors when open the web project
+if [ $action = "uninstall" ]; then
+  echo "Uninstlling ..."
+  bash "${BIN_DIR}/uninstall.sh"
+  failedandStop $?
   echo "卸载完成,请在退出开发者工具后手动删除此项目目录"
-else
-  exec ./nw -load-extension=./package.nw/js/ideplugin $@
 fi
